@@ -91,7 +91,7 @@ http://localhost:15672
 Edit in `k8s-all.yaml`:
 
 ```yaml
-replicas: 8
+replicas: 8 #e.g., change to any number scaled to workload
 ```
 
 Apply:
