@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: outputs-helper
+  namespace: hzz-rabbit
+spec:
+  containers:
+    - name: helper
+      image: python:3.11-slim
+      command: ["sleep", "3600"]
+      volumeMounts:
+        - name: outputs
+          mountPath: /outputs
+  volumes:
+    - name: outputs
+      persistentVolumeClaim:
+        claimName: hzz-outputs-pvc

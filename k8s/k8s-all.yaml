@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hzz-rabbit
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hzz-outputs-pvc
+  namespace: hzz-rabbit
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: hzz-rabbit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.13-management
+          ports:
+            - name: amqp
+              containerPort: 5672
+            - name: http
+              containerPort: 15672
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+      volumes:
+        - name: rabbitmq-data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: hzz-rabbit
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: http
+      port: 15672
+      targetPort: 15672
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: hzz-rabbit
+spec:
+  replicas: 4   
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: worker
+          image: hzz-k8s:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "worker.py"]
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: producer-job
+  namespace: hzz-rabbit
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: producer
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: producer
+          image: hzz-k8s:latest  
+          imagePullPolicy: IfNotPresent
+          command: ["python", "producer.py"]
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: combiner-job
+  namespace: hzz-rabbit
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: combiner
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: combiner
+          image: hzz-k8s:latest  
+          imagePullPolicy: IfNotPresent
+          command: ["python", "combiner.py"]
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          volumeMounts:
+            - name: outputs
+              mountPath: /outputs
+      volumes:
+        - name: outputs
+          persistentVolumeClaim:
+            claimName: hzz-outputs-pvc

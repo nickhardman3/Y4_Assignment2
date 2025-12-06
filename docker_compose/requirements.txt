@@ -1,0 +1,8 @@
+numpy
+matplotlib
+awkward
+uproot
+vector
+pika
+atlasopenmagic
+requests

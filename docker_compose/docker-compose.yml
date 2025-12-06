@@ -1,0 +1,44 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    
+      - "15672:15672" 
+
+  producer:
+    build:
+      context: .
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      JOB_FRACTION: "1.0"        
+    command: ["python", "-u", "producer.py"]
+
+  worker:
+    build:
+      context: .
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    command: ["python", "-u", "worker.py"]
+    restart: unless-stopped
+  
+
+  combiner:
+    build:
+      context: .
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      JOB_FRACTION: "1.0"
+      OUTPUT_PREFIX: "/outputs/hzz"
+    command: ["python", "-u", "combiner.py"]
+    volumes:
+      - ./outputs:/outputs
+    restart: "no"
