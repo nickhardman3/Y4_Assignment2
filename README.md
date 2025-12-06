@@ -60,14 +60,6 @@ From the `k8s` directory:
 docker build -t hzz-k8s:latest .
 ```
 
-If using kind or minikube, load the image into your cluster:
-
-```bash
-kind load docker-image hzz-k8s:latest
-# OR
-minikube image load hzz-k8s:latest
-```
-
 ### Run Full Pipeline
 
 ```bash
