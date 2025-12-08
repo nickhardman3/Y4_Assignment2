@@ -188,10 +188,10 @@ def run_analysis(fraction, output_prefix):
 
     signal_significance = N_sig/np.sqrt(N_bg + 0.3 * N_bg**2)
 
-    plot_path = f"{output_prefix}_histogram.png"
+    plot_path = f"{output_prefix}_histogram.png" #saves plot as png
     plt.savefig(plot_path, dpi=200)
 
-    npz_path = f"{output_prefix}_data.npz"
+    npz_path = f"{output_prefix}_data.npz" #saves histogram arrays
     np.savez(
         npz_path,
         bin_edges=bin_edges,
@@ -203,7 +203,7 @@ def run_analysis(fraction, output_prefix):
         signal_tot=signal_tot,
     )
 
-    summary_path = f"{output_prefix}_summary.json"
+    summary_path = f"{output_prefix}_summary.json" #saves json summary for N_big N_sig and significance
     summary = {
         "N_sig": float(N_sig),
         "N_bg": float(N_bg),

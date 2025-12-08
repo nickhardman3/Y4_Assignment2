@@ -9,20 +9,20 @@ import requests
 from analysis import process_file_hist
 
 QUEUE_FILES = "hzz_files"
-QUEUE_PARTIALS = "hzz_partials"
+QUEUE_PARTIALS = "hzz_partials" #calls both queues
 
 
 def main():
-    rabbitmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq")
+    rabbitmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq") #read RMQ from host environment
 
-    params = pika.ConnectionParameters(
+    params = pika.ConnectionParameters( #RMQ connection settings 
         host=rabbitmq_host,
         port=5672,
         heartbeat=600,
         blocked_connection_timeout=300,
     )
 
-    connection = None
+    connection = None 
     while connection is None:
         try:
             print(f"[worker] Connecting to RabbitMQ at {rabbitmq_host}:5672 ...")
@@ -33,10 +33,10 @@ def main():
             time.sleep(5)
 
     channel = connection.channel()
-    channel.queue_declare(queue=QUEUE_FILES, durable=True)
+    channel.queue_declare(queue=QUEUE_FILES, durable=True) #declare the queues in case RMQ restarts before workers
     channel.queue_declare(queue=QUEUE_PARTIALS, durable=True)
 
-    def process_message(ch, method, properties, body):
+    def process_message(ch, method, properties, body): #handles one filename from RMQ
         try:
             data = json.loads(body.decode("utf-8"))
         except json.JSONDecodeError:
@@ -50,9 +50,9 @@ def main():
 
         print(f"[worker] Received file job for sample '{sample}'")
         try:
-            hist, hist_w2 = process_file_hist(sample, file_path, fraction)
+            hist, hist_w2 = process_file_hist(sample, file_path, fraction) #run analysis per file
 
-            result_message = {
+            result_message = { #prepare message for queue
                 "sample": sample,
                 "hist": hist.tolist(),
                 "hist_w2": hist_w2.tolist() if hist_w2 is not None else None,
@@ -70,18 +70,18 @@ def main():
 
             print(f"[worker] Finished file job for sample '{sample}'")
             ch.basic_ack(delivery_tag=method.delivery_tag)
-        except Exception as e:
+        except Exception as e: #fail job without blocking the queue
             print(f"[worker] Error while processing file for '{sample}': {e}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
-    channel.basic_qos(prefetch_count=1)
+    channel.basic_qos(prefetch_count=1) #ensures one file is processed per worker at any time
     channel.basic_consume(queue=QUEUE_FILES, on_message_callback=process_message)
 
     print("[worker] Waiting for file jobs. To exit, stop the container.")
     try:
         channel.start_consuming()
     except KeyboardInterrupt:
-        channel.stop_consuming()
+        channel.stop_consuming() #ctrl C terminates 
     finally:
         connection.close()
         print("[worker] Connection closed")

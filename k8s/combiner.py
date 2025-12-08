@@ -18,7 +18,7 @@ from config import (
 )
 from config import GeV  
 
-QUEUE_NAME = "hzz_partials"
+QUEUE_NAME = "hzz_partials" #queue for workers to send partial histograms
 
 
 def make_final_outputs(hist_by_sample, w2_by_sample, fraction, output_prefix):
@@ -197,7 +197,7 @@ def main():
         s: np.zeros(n_bins, dtype=float) for s in samples if "data" not in s.lower()
     }
 
-    params = pika.ConnectionParameters(
+    params = pika.ConnectionParameters( #retry loop so the combiner waits for RMQ to become available
         host=rabbitmq_host,
         port=5672,
         heartbeat=600,
@@ -219,7 +219,7 @@ def main():
 
     state = {"received": 0}
 
-    def callback(ch, method, properties, body):
+    def callback(ch, method, properties, body): #callback to handle each partial histogram message
         data = json.loads(body.decode("utf-8"))
         sample = data["sample"]
         hist = np.array(data["hist"], dtype=float)

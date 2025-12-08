@@ -7,10 +7,10 @@ import pika
 from config import samples
 
 
-QUEUE_NAME = "hzz_files"
+QUEUE_NAME = "hzz_files" #queue to distribute the files to workers
 
 
-def send_file_jobs(fraction=1.0):
+def send_file_jobs(fraction=1.0): #sends one messsage per ROOT file into RabbitMQ
     rabbitmq_host = os.environ.get("RABBITMQ_HOST", "rabbitmq")
 
     params = pika.ConnectionParameters(
@@ -21,7 +21,7 @@ def send_file_jobs(fraction=1.0):
     )
 
     connection = None
-    while connection is None:
+    while connection is None: #retries connection to RMQ 
         try:
             print(f"[producer] Connecting to RabbitMQ at {rabbitmq_host}:5672 ...")
             connection = pika.BlockingConnection(params)
@@ -47,7 +47,7 @@ def send_file_jobs(fraction=1.0):
             "fraction": float(fraction),
         }
 
-        channel.basic_publish(
+        channel.basic_publish( #sends file job as a json message to the work queue
             exchange="",
             routing_key=QUEUE_NAME,
             body=json.dumps(message),
